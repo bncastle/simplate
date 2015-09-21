@@ -52,7 +52,7 @@ namespace Pixelbyte.Simplate
 
         public static Simplate Compile(string template)
         {
-            using(var sr = new StringReader(template))
+            using (var sr = new StringReader(template))
                 return Compile(sr);
         }
 
@@ -211,7 +211,6 @@ namespace Pixelbyte.Simplate
         ITemplateElement ForEach()
         {
             TokenInfo t;
-            string variableName = null;
             string collectionName = null;
             bool foundIn = false;
             StringBuilder sb = new StringBuilder();
@@ -226,8 +225,7 @@ namespace Pixelbyte.Simplate
                             collectionName = t.name;
                         else
                         {
-                            variableName = t.name;
-                            forEachIterator = variableName;
+                            forEachIterator = t.name;
                         }
                         break;
                     case TokenType.In: foundIn = true; break;
@@ -262,12 +260,13 @@ namespace Pixelbyte.Simplate
 
             if (string.IsNullOrEmpty(collectionName))
                 throw new Exception("foreach requires an iterable item! ex: {{foreach item in items}} where items is an iterable parameter");
-            if (string.IsNullOrEmpty(variableName))
+            if (string.IsNullOrEmpty(forEachIterator))
                 throw new Exception("foreach requires an iterable item variable Name! ex: {{foreach item in items}} where item is the object within the collection");
 
-            forEachIterator = null;
             //Now add this ForEach to the template
-            return new ForEachElement(collectionName, variableName, foreachElements);
+            var fei = new ForEachElement(collectionName, forEachIterator, foreachElements);
+            forEachIterator = null;
+            return fei;
         }
 
         TokenInfo GetToken()
@@ -275,15 +274,18 @@ namespace Pixelbyte.Simplate
             switch (currentchar)
             {
                 case '{': if (PeekChar == '{') { NextChar(); NextChar(); inCommand = true; return new TokenInfo(TokenType.BeginCommand); } break;
-                case '}': if (PeekChar == '}') { NextChar(); NextChar(); inCommand = false; return new TokenInfo(TokenType.ExitCommand); } break;
             }
 
             if (inCommand)
             {
+                //Whitespace is not important in a command
+                EatWhitespace();
+
                 switch (currentchar)
                 {
                     case '(': return new TokenInfo(TokenType.ParenOpen);
                     case ')': return new TokenInfo(TokenType.ParenClose);
+                    case '}': if (PeekChar == '}') { NextChar(); NextChar(); inCommand = false; return new TokenInfo(TokenType.ExitCommand); } break;
                 }
 
                 //Whitespace is not important in a command
@@ -303,17 +305,12 @@ namespace Pixelbyte.Simplate
                         default: info.type = TokenType.Word; break;
                     }
                 }
-                else
-                    info.type = TokenType.Function;
                 return info;
             }
             return new TokenInfo(TokenType.None);
         }
 
-        void EatWhitespace()
-        {
-            while (!Eof && WHITESPACE.IndexOf(currentchar) > -1) NextChar();
-        }
+        void EatWhitespace() { while (!Eof && WHITESPACE.IndexOf(currentchar) > -1) NextChar(); }
 
         bool IsWhiteSpace(StringBuilder sb)
         {
@@ -324,10 +321,7 @@ namespace Pixelbyte.Simplate
             return true;
         }
 
-        void EatNewlines()
-        {
-            while (!Eof && NEWLINE.IndexOf(currentchar) > -1) NextChar();
-        }
+        void EatNewlines() { while (!Eof && NEWLINE.IndexOf(currentchar) > -1) NextChar(); }
 
         //Parses a double-quoted string
         //

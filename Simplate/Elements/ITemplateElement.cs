@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Pixelbyte.Simplate
+namespace Pixelbyte.CodeGen
 {
     public interface ITemplateElement
     {

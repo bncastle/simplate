@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Pixelbyte.Simplate
+namespace Pixelbyte.CodeGen
 {
     public class ForEachElement : ITemplateElement
     {

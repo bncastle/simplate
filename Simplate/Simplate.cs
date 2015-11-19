@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace Pixelbyte.Simplate
+namespace Pixelbyte.CodeGen
 {
     /// <summary>
     /// Simplate - A very simple template system by Pixelbyte Studios

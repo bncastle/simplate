@@ -1,4 +1,4 @@
-﻿using Pixelbyte.Simplate;
+﻿using Pixelbyte.CodeGen;
 using System;
 using System.Collections.Generic;
 using System.IO;

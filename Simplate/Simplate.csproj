@@ -7,8 +7,8 @@
     <ProjectGuid>{C81A17BE-8E88-41A6-957C-BBE76197B92F}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Pixelbyte.Simplate</RootNamespace>
-    <AssemblyName>Pixelbyte.Simplate</AssemblyName>
+    <RootNamespace>Pixelbyte.CodeGen</RootNamespace>
+    <AssemblyName>Simplate</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />

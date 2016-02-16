@@ -25,14 +25,10 @@ namespace Pixelbyte.CodeGen
                 throw new Exception("Unable to find: " + collectionName + " in the parameters!");
 
             ICollection collection = data as ICollection;
-            if(collection == null)
-
-            if (data is ICollection)
-                    throw new Exception("Item with key: " + collectionName + "must be iterable!");
+            if (collection == null)
+                throw new Exception("Item with key: " + collectionName + "must be iterable!");
 
             var sb = new StringBuilder();
-            //int index = 0;
-            //var count = collection.Count;
             foreach (var item in collection)
             {
                 parameters[variableName] = item;
@@ -41,7 +37,7 @@ namespace Pixelbyte.CodeGen
                     sb.Append(element.GetOutput(parameters, functors));
                 }
             }
-            //Put the original data back
+            //Remove the data we added
             parameters[variableName] = null;
 
             return sb.ToString();

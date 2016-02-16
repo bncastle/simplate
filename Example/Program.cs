@@ -10,6 +10,13 @@ namespace Template_parser
 {
     static class Program
     {
+        const string bigT = @"
+the list:
+    {{foreach item in items}}
+    {{tinyTemplate(item)}}
+    {{end foreach}}
+";
+
         static void Main()
         {
 
@@ -19,26 +26,56 @@ namespace Template_parser
 //
 public static class {{ className }}
 {
-	{{foreach item in items}}
-	public const string {{ pascal(item) }} = ""{{ item }}"";
-	{{end foreach}}
-}";
-            Simplate tk = Simplate.Compile(constTemplate);
+    {{foreach item in items}}
+    public const string {{ pascal(item) }} = ""{{ item }}"";
+    {{end foreach}}
 
+    Great!
+}";
+
+            
             var items = new string[] { "green", "blue", "red", "black", "elvis" };
             var functors = new Functors();
-            functors.Add("camel", new Func<string, string>(StringExtensions.ToCamelCase));
-            functors.Add("pascal", new Func<string, string>(StringExtensions.ToPascalCase));
-            functors.Add("test", new Func<string, string>(Program.Test));
+            functors.Add("camel", StringExtensions.ToCamelCase);
+            functors.Add("pascal", StringExtensions.ToPascalCase);
+            functors.Add("test", Test);
             var para = new Dictionary<string, object>();
             para.Add("items", items);
             para.Add("className", "Tests");
-            Console.WriteLine(tk.GetOutput(para, functors));
 
-            using (StreamWriter sw = new StreamWriter(@"E:\test.txt"))
-            {
-                sw.Write(tk.GetOutput(para, functors));
-            }
+            //Console.WriteLine(tk.GetOutput(para, functors));
+
+            //using (StreamWriter sw = new StreamWriter(@"E:\test.txt"))
+            //{
+            //    sw.Write(tk.GetOutput(para, functors));
+            //}
+
+            //Test a simple constant template
+            Simplate ct = Simplate.Compile(constTemplate);
+            string ctoutput = ct.GetOutput(para, functors);
+            Console.WriteLine(ctoutput);
+            Console.WriteLine("----------------------------------");
+            //Test using a Template within a template
+            //
+            functors = new Functors();
+            functors.Add("tinyTemplate", TinyTemplate);
+            Simplate testNested = Simplate.Compile(bigT);
+            string outp = testNested.GetOutput(para, functors);
+            Console.WriteLine(outp);
+        }
+
+            const string tinyTemplate = @"//TODO: Mojo Here
+    {{ item }}
+";
+        static Simplate tinyTempl;
+
+        public static string TinyTemplate(string input)
+        {
+            if(tinyTempl == null)
+                tinyTempl = Simplate.Compile(tinyTemplate);
+
+            var para = new Dictionary<string, object>() { { "item", input } };
+            return tinyTempl.GetOutput(para, null);
         }
 
         public static string Test(string input)

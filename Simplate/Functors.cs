@@ -25,6 +25,12 @@ namespace Pixelbyte.CodeGen
             table.Add(key, d);
         }
 
+        public void Add(string key, Func<string, string> del)
+        {
+            if (string.IsNullOrEmpty(key)) return;
+            table.Add(key, del);
+        }
+
         public string Call(string methodName, params object[] parameters)
         {
             Delegate del = null;

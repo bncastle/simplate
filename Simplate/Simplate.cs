@@ -72,6 +72,7 @@ namespace Pixelbyte.CodeGen
                 switch (t.type)
                 {
                     case TokenType.BeginCommand:
+                        //var numspaces = CountSpaces(sb);
                         ITemplateElement elem = ParseCommand();
 
                         if (elem != null)
@@ -89,14 +90,17 @@ namespace Pixelbyte.CodeGen
                         if (currentchar == '\n')
                         {
                             elements.Add(new TextElement(sb.ToString()));
+                            //Console.WriteLine(":{0}:", sb.ToString());
                             sb.Length = 0;
                         }
                         NextChar();
                         break;
                     default:
-                        NextChar();
-                        break;
+                        //NextChar();
+                        throw new Exception("Unexpected!");
+                        //break;
                 }
+                //Console.WriteLine(":{0}:", sb.ToString());
             }
 
             //Anything left is probably a plain text command
@@ -109,6 +113,18 @@ namespace Pixelbyte.CodeGen
                 sb.Length = 0;
             }
         }
+
+        //int CountSpaces(StringBuilder sb)
+        //{
+        //    int num = 0;
+        //    for (int i = 0; i < sb.Length; i++)
+        //    {
+        //        //count tabs as 4 spaces
+        //        if (sb[i] == '\t') num += 4;
+        //        else if (sb[i] == ' ') num++;
+        //    }
+        //    return num;
+        //}
 
         ITemplateElement ParseCommand()
         {
@@ -231,12 +247,13 @@ namespace Pixelbyte.CodeGen
                     case TokenType.In: foundIn = true; break;
                     case TokenType.ExitCommand: EatNewlines(); break;
                     case TokenType.BeginCommand:
+                        //var numspaces = CountSpaces(sb);
                         //Look in the command
                         ITemplateElement templateElement = ParseCommand();
 
                         EndBlockElement ce = templateElement as EndBlockElement;
 
-                        if (ce != null && ce.type == EndBlockType.ForEach) { t.type = TokenType.End; EatNewlines(); }
+                        if (ce != null && ce.type == EndBlockType.ForEach) { t.type = TokenType.End; EatOneNewline(); }
                         else
                         {
                             if (sb.Length > 0) foreachElements.Add(new TextElement(sb.ToString()));
@@ -322,6 +339,22 @@ namespace Pixelbyte.CodeGen
         }
 
         void EatNewlines() { while (!Eof && NEWLINE.IndexOf(currentchar) > -1) NextChar(); }
+
+        /// <summary>
+        /// This method eats only 1 newline combo
+        /// that can be any of the following:
+        /// '\n' or '\r' '\r\n' or '\n\r'
+        /// </summary>
+        void EatOneNewline()
+        {
+            if (!Eof )
+            {
+                int charIndex = NEWLINE.IndexOf(currentchar);
+                if (charIndex == -1) return;
+                NextChar();
+                if (!Eof && charIndex != NEWLINE.IndexOf(currentchar)) NextChar();
+            }
+        }
 
         //Parses a double-quoted string
         //

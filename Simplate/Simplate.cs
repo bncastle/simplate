@@ -5,6 +5,67 @@ using System.Text;
 
 namespace Pixelbyte.CodeGen
 {
+    class Indent
+    {
+        const string SPACES_PER_TAB = "    ";
+
+        StringBuilder indent;
+        bool startOfLine = true;
+        string prevIndent;
+
+        public string CurrentIndentation { get { if (indent.Length == 0) return string.Empty; else return indent.ToString(); } }
+
+        public string LastValidIndentation { get { if (indent.Length == 0) return prevIndent; else return indent.ToString(); } }
+
+        public Indent()
+        {
+            indent = new StringBuilder();
+        }
+
+        public void Update(char c)
+        {
+            if (NewLine(c))
+            {
+                prevIndent = indent.ToString();
+                indent.Length = 0;
+                startOfLine = true;
+            }
+            else if (startOfLine && Whitespace(c))
+            {
+                //Replace tabs with spaces
+                if (c == '\t')
+                    indent.Append(SPACES_PER_TAB);
+                else
+                    indent.Append(c);
+            }
+            else
+            {
+                if (startOfLine)
+                    prevIndent = indent.ToString();
+                else
+                    prevIndent = string.Empty;
+                startOfLine = false;
+                indent.Length = 0;
+            }
+        }
+
+        public void Reset()
+        {
+            prevIndent = string.Empty;
+            startOfLine = false;
+            indent.Length = 0;
+        }
+
+        bool Whitespace(char ch)
+        {
+            return (ch == ' ' || ch == '\t');
+        }
+
+        bool NewLine(char ch)
+        {
+            return (ch == '\n' || ch == '\r');
+        }
+    }
     /// <summary>
     /// Simplate - A very simple template system by Pixelbyte Studios
     ///  Give it a text template and compile it using Compile()
@@ -26,13 +87,15 @@ namespace Pixelbyte.CodeGen
         char currentchar, prevChar;
 
         //Parser State stuff
-        bool inCommand = false;
+        int commandLevel = 0;
 
         //This list will contain the compiled template elements
         List<ITemplateElement> elements;
 
+        Indent indentation;
+
         char PeekChar { get { return Convert.ToChar(reader.Peek()); } }
-        void NextChar() { if (!Eof && PeekChar == '\n') { line++; col = 0; } else col++; prevChar = currentchar; currentchar = Convert.ToChar(reader.Read()); }
+        void NextChar() { if (!Eof && PeekChar == '\n') { line++; col = 0; } else col++; prevChar = currentchar; currentchar = Convert.ToChar(reader.Read()); indentation.Update(currentchar); }
 
         bool Eof { get { return reader.Peek() == -1; } }
 
@@ -41,6 +104,7 @@ namespace Pixelbyte.CodeGen
             reader = rdr;
             line = 0;
             col = 0;
+            indentation = new Indent();
         }
 
         public static Simplate Compile(TextReader tr)
@@ -65,6 +129,7 @@ namespace Pixelbyte.CodeGen
 
             TokenInfo t;
             var sb = new StringBuilder();
+
             NextChar();
             while (!Eof)
             {
@@ -72,27 +137,29 @@ namespace Pixelbyte.CodeGen
                 switch (t.type)
                 {
                     case TokenType.BeginCommand:
-                        //var numspaces = CountSpaces(sb);
                         ITemplateElement elem = ParseCommand();
 
                         if (elem != null)
                         {
                             //Anything except a ForEachelement, add
                             //the current acquired characters to our compiled template
-                            if (!(elem is ForEachElement))
+                            if (!(elem is ForEachElement) && sb.Length > 0)
                                 elements.Add(new TextElement(sb.ToString()));
                             elements.Add(elem);
                         }
                         sb.Length = 0;
                         break;
                     case TokenType.None:
-                        sb.Append(currentchar);
-                        if (currentchar == '\n')
+                        if (NEWLINE.IndexOf(currentchar) > -1)
                         {
+                            string nl = GrabNewlines();
+                            sb.Append(nl);
                             elements.Add(new TextElement(sb.ToString()));
-                            //Console.WriteLine(":{0}:", sb.ToString());
                             sb.Length = 0;
                         }
+                        else
+                            sb.Append(currentchar);
+
                         NextChar();
                         break;
                     default:
@@ -114,18 +181,6 @@ namespace Pixelbyte.CodeGen
             }
         }
 
-        //int CountSpaces(StringBuilder sb)
-        //{
-        //    int num = 0;
-        //    for (int i = 0; i < sb.Length; i++)
-        //    {
-        //        //count tabs as 4 spaces
-        //        if (sb[i] == '\t') num += 4;
-        //        else if (sb[i] == ' ') num++;
-        //    }
-        //    return num;
-        //}
-
         ITemplateElement ParseCommand()
         {
             TokenInfo t;
@@ -137,14 +192,18 @@ namespace Pixelbyte.CodeGen
                 switch (t.type)
                 {
                     case TokenType.Function:
-                        element = new MethodElement(t.name, t.parameters);
+                        //Console.WriteLine("'{0}' {1}", t.indentation, t.name);
+                        element = new MethodElement(t);
                         break;
                     case TokenType.Word:
-                        //Assuming since it isnt a keyword or a function that it is a variable
+                        //Assuming since it isn't a keyword or a function that it is a variable
                         element = new TextElement(t.name, true);
                         break;
                     case TokenType.ForEach:
                         element = ForEach();
+                        return element;
+                    case TokenType.If:
+                        element = If();
                         return element;
                     case TokenType.End:
                         element = new EndBlockElement(t.name);
@@ -195,13 +254,20 @@ namespace Pixelbyte.CodeGen
                         if (depth == 0) return paramElements.ToArray();
                         break;
                     case TokenType.Function:
-                        paramElements.Add(new MethodElement(t.name, t.parameters));
+                        paramElements.Add(new MethodElement(t));
                         break;
                     case TokenType.Word:
                         //If this is the name of an iterator variable, treat it as such
                         bool isVariable = !string.IsNullOrEmpty(forEachIterator) && t.name == forEachIterator;
                         paramElements.Add(new TextElement(t.name, isVariable));
                         break;
+                    case TokenType.BeginCommand:
+                        ITemplateElement commandElement = ParseCommand();
+                        paramElements.Add(commandElement);
+                        break;
+                    //case TokenType.ExitCommand:
+                    //    EatNewlines();
+                    //    break;
                     default:
                         NextChar();
                         break;
@@ -221,6 +287,12 @@ namespace Pixelbyte.CodeGen
             return sb.ToString();
         }
 
+        private ITemplateElement If()
+        {
+            //TODO: Implement
+            throw new NotImplementedException();
+        }
+
         //This lets us keep track of the iterator variable which we will look for
         //in other methods so we can appropriately replace it with its value
         string forEachIterator = null;
@@ -230,6 +302,8 @@ namespace Pixelbyte.CodeGen
             string collectionName = null;
             bool foundIn = false;
             StringBuilder sb = new StringBuilder();
+            //bool inCommand = false;
+
             List<ITemplateElement> foreachElements = new List<ITemplateElement>();
             do
             {
@@ -245,30 +319,39 @@ namespace Pixelbyte.CodeGen
                         }
                         break;
                     case TokenType.In: foundIn = true; break;
-                    case TokenType.ExitCommand: EatNewlines(); break;
+                    case TokenType.ExitCommand: EatOneNewline(); break;
+                    //case TokenType.ExitCommand: break;
                     case TokenType.BeginCommand:
-                        //var numspaces = CountSpaces(sb);
                         //Look in the command
                         ITemplateElement templateElement = ParseCommand();
 
                         EndBlockElement ce = templateElement as EndBlockElement;
+                        //MethodElement me = templateElement as MethodElement;
 
                         if (ce != null && ce.type == EndBlockType.ForEach) { t.type = TokenType.End; EatOneNewline(); }
+                        //else if (me != null)
+                        //{
+                        //    if (sb.Length > 0) foreachElements.Add(new TextElement(sb.ToString()));
+                        //}
                         else
                         {
                             if (sb.Length > 0) foreachElements.Add(new TextElement(sb.ToString()));
                             foreachElements.Add(templateElement);
+                            sb.Length = 0;
                         }
-                        sb.Length = 0;
                         break;
                     case TokenType.End: break;
                     default:
-                        sb.Append(currentchar);
-                        if (currentchar == '\n')
+                        if (currentchar == '\n' || currentchar == '\r')
                         {
+                            string newlines = GrabNewlines();
+                            sb.Append(newlines);
                             foreachElements.Add(new TextElement(sb.ToString()));
                             sb.Length = 0;
                         }
+                        else
+                            sb.Append(currentchar);
+
                         NextChar();
                         break;
                 }
@@ -286,14 +369,16 @@ namespace Pixelbyte.CodeGen
             return fei;
         }
 
+        string indent = string.Empty;
         TokenInfo GetToken()
         {
             switch (currentchar)
             {
-                case '{': if (PeekChar == '{') { NextChar(); NextChar(); inCommand = true; return new TokenInfo(TokenType.BeginCommand); } break;
+                case '{': if (PeekChar == '{') { indent = indentation.LastValidIndentation; indentation.Reset(); NextChar(); NextChar(); commandLevel++; return new TokenInfo(TokenType.BeginCommand); } break;
+                    //case '{': if (PeekChar == '{') { NextChar(); NextChar(); commandLevel++; return new TokenInfo(TokenType.BeginCommand); } break;
             }
 
-            if (inCommand)
+            if (commandLevel > 0)
             {
                 //Whitespace is not important in a command
                 EatWhitespace();
@@ -302,13 +387,14 @@ namespace Pixelbyte.CodeGen
                 {
                     case '(': return new TokenInfo(TokenType.ParenOpen);
                     case ')': return new TokenInfo(TokenType.ParenClose);
-                    case '}': if (PeekChar == '}') { NextChar(); NextChar(); inCommand = false; return new TokenInfo(TokenType.ExitCommand); } break;
+                    case '}': if (PeekChar == '}') { NextChar(); NextChar(); commandLevel--; return new TokenInfo(TokenType.ExitCommand); } break;
                 }
 
                 //Whitespace is not important in a command
                 EatWhitespace();
 
                 TokenInfo info = FunctionOrWord();
+                info.indentation = indent;
 
                 //Not a function, must be a word
                 if (!info.IsFunction)
@@ -324,21 +410,37 @@ namespace Pixelbyte.CodeGen
                 }
                 return info;
             }
+            else
+                indent = String.Empty;
+
             return new TokenInfo(TokenType.None);
         }
 
         void EatWhitespace() { while (!Eof && WHITESPACE.IndexOf(currentchar) > -1) NextChar(); }
 
-        bool IsWhiteSpace(StringBuilder sb)
+        bool IsWhitespace(string st)
         {
-            for (int i = 0; i < sb.Length; i++)
+            if (string.IsNullOrEmpty(st)) return true;
+            for (int i = 0; i < st.Length; i++)
             {
-                if (sb[i] != ' ' && sb[i] != '\t') return false;
+                if (st[i] != '\t' && st[i] != ' ') return false;
             }
             return true;
         }
 
-        void EatNewlines() { while (!Eof && NEWLINE.IndexOf(currentchar) > -1) NextChar(); }
+        //void EatNewlines() { while (!Eof && NEWLINE.IndexOf(currentchar) > -1) NextChar(); }
+
+        string GrabNewlines()
+        {
+            StringBuilder sb = new StringBuilder();
+            while (!Eof && NEWLINE.IndexOf(currentchar) > -1)
+            {
+                sb.Append(currentchar);
+                if (NEWLINE.IndexOf(PeekChar) == -1) break;
+                NextChar();
+            }
+            return sb.ToString();
+        }
 
         /// <summary>
         /// This method eats only 1 newline combo
@@ -347,7 +449,7 @@ namespace Pixelbyte.CodeGen
         /// </summary>
         void EatOneNewline()
         {
-            if (!Eof )
+            if (!Eof)
             {
                 int charIndex = NEWLINE.IndexOf(currentchar);
                 if (charIndex == -1) return;

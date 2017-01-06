@@ -1,10 +1,11 @@
 ﻿namespace Pixelbyte.CodeGen
 {
-    class TokenInfo
+    public class TokenInfo
     {
         public TokenType type;
         public string name = null;
         public ITemplateElement[] parameters = null;
+        public string indentation;
 
         public TokenInfo() { }
         public TokenInfo(TokenType tokenType) { type = tokenType; }

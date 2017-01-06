@@ -38,6 +38,7 @@
   <ItemGroup>
     <Compile Include="Elements\EndBlockElement.cs" />
     <Compile Include="Elements\ForEachElement.cs" />
+    <Compile Include="Elements\IfElement.cs" />
     <Compile Include="Functors.cs" />
     <Compile Include="Elements\ITemplateElement.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

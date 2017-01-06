@@ -8,7 +8,15 @@ namespace Pixelbyte.CodeGen
     public class ForEachElement : ITemplateElement
     {
         List<ITemplateElement> elements;
+
+        /// <summary>
+        /// The name of the collection that we will grab from the parameters
+        /// </summary>
         string collectionName;
+
+        /// <summary>
+        /// The name of the variable to which each item of the collection is assigned
+        /// </summary>
         string variableName;
 
         public ForEachElement(string collectionName, string variableName, List<ITemplateElement> block)
@@ -21,6 +29,7 @@ namespace Pixelbyte.CodeGen
         public string GetOutput(Dictionary<string, object> parameters, Functors functors)
         {
             object data = null;
+
             if (!parameters.TryGetValue(collectionName, out data))
                 throw new Exception("Unable to find: " + collectionName + " in the parameters!");
 
@@ -32,6 +41,7 @@ namespace Pixelbyte.CodeGen
             foreach (var item in collection)
             {
                 parameters[variableName] = item;
+
                 foreach (var element in elements)
                 {
                     sb.Append(element.GetOutput(parameters, functors));

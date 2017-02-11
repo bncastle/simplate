@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Pixelbyte.CodeGen
+namespace Pixelbyte.Simplate
 {
     /// <summary>
     /// mmm functors. mmm good they are

@@ -1,4 +1,4 @@
-﻿namespace Pixelbyte.CodeGen
+﻿namespace Pixelbyte.Simplate
 {
     public enum TokenType
     {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace Pixelbyte.CodeGen
+namespace Pixelbyte.Simplate
 {
     public class MethodElement : ITemplateElement
     {

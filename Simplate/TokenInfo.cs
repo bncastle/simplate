@@ -1,4 +1,4 @@
-﻿namespace Pixelbyte.Simplate
+﻿namespace Pixelbyte.CodeGen
 {
     public class TokenInfo
     {

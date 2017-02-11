@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Pixelbyte.Simplate
+namespace Pixelbyte.CodeGen
 {
     public class TextElement : ITemplateElement
     {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace Pixelbyte.Simplate
+namespace Pixelbyte.CodeGen
 {
     class Indent
     {

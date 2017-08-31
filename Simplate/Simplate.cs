@@ -95,7 +95,23 @@ namespace Pixelbyte.CodeGen
         Indent indentation;
 
         char PeekChar { get { return Convert.ToChar(reader.Peek()); } }
-        void NextChar() { if (!Eof && PeekChar == '\n') { line++; col = 0; } else col++; prevChar = currentchar; currentchar = Convert.ToChar(reader.Read()); indentation.Update(currentchar); }
+        void NextChar()
+        {
+            if (!Eof && PeekChar == '\n')
+            {
+                line++;
+                col = 0;
+            }
+            else
+                col++;
+
+            if (!Eof)
+            {
+                prevChar = currentchar;
+                currentchar = Convert.ToChar(reader.Read());
+                indentation.Update(currentchar);
+            }
+        }
 
         bool Eof { get { return reader.Peek() == -1; } }
 

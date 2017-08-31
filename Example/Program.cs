@@ -53,6 +53,10 @@ public static class TestPropAccess
     {{Turkey()}}
     {{end foreach}}
 }";
+
+        public const string testEmptyEnd = @"
+Itsa me mario!
+";
         static Functors functors;
         static Simplate constSimplate;
         static void Main()
@@ -81,6 +85,7 @@ public static class TestPropAccess
 
             //Test methods using Simplates
             var testMethods = Simplate.Compile(testMethodsUsingSimplates);
+            var tm = Simplate.Compile(testEmptyEnd);
 
             using (StreamWriter sw = new StreamWriter(@"E:\test.txt"))
             {

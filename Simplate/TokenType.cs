@@ -8,6 +8,6 @@
         BeginCommand, ExitCommand,
         Function, Word, In,
         ForEach, End,
-        If //TODO: Implement
+        If, Else
     }
 }

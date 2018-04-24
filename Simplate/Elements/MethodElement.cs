@@ -11,7 +11,7 @@ namespace Pixelbyte.CodeGen
         string indent;
         ITemplateElement[] methodParams;
 
-        public MethodElement(TokenInfo ti)
+        public MethodElement(Token ti)
         {
             methodName = ti.name;
             indent = ti.indentation;

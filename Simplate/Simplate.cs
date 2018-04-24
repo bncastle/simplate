@@ -125,9 +125,9 @@ namespace Pixelbyte.CodeGen
 
         public static Simplate Compile(TextReader tr)
         {
-            Simplate tk = new Simplate(tr);
-            tk.Compile();
-            return tk;
+            Simplate simpl = new Simplate(tr);
+            simpl.Compile();
+            return simpl;
         }
 
         public static Simplate Compile(string template)
@@ -143,7 +143,7 @@ namespace Pixelbyte.CodeGen
 
             elements = new List<ITemplateElement>();
 
-            TokenInfo t;
+            Token t;
             var sb = new StringBuilder();
 
             NextChar();
@@ -199,7 +199,7 @@ namespace Pixelbyte.CodeGen
 
         ITemplateElement ParseCommand()
         {
-            TokenInfo t;
+            Token t;
             ITemplateElement element = null;
 
             do
@@ -221,6 +221,9 @@ namespace Pixelbyte.CodeGen
                     case TokenType.If:
                         element = If();
                         return element;
+                    case TokenType.Else:
+                        element = Else();
+                        return element;
                     case TokenType.End:
                         element = new EndBlockElement(t.name);
                         break;
@@ -229,9 +232,9 @@ namespace Pixelbyte.CodeGen
             return element;
         }
 
-        TokenInfo FunctionOrWord()
+        Token FunctionOrWord()
         {
-            TokenInfo ti = new TokenInfo(TokenType.Word, ParseWord());
+            Token ti = new Token(TokenType.Word, ParseWord());
 
             //Eat whitespace if there is any
             EatWhitespace();
@@ -248,7 +251,7 @@ namespace Pixelbyte.CodeGen
 
         ITemplateElement[] GetParenContents()
         {
-            TokenInfo t;
+            Token t;
             int depth = 1;
             List<ITemplateElement> paramElements = new List<ITemplateElement>();
             StringBuilder sb = new StringBuilder();
@@ -305,16 +308,113 @@ namespace Pixelbyte.CodeGen
 
         private ITemplateElement If()
         {
-            //TODO: Implement
-            throw new NotImplementedException();
+            Token t;
+            StringBuilder sb = new StringBuilder();
+            //bool inCommand = false;
+            string conditionalName = string.Empty;
+            List<ITemplateElement> statements = new List<ITemplateElement>();
+            ITemplateElement elseCmd = null;
+
+            do
+            {
+                t = GetToken();
+                switch (t.type)
+                {
+                    case TokenType.Word: conditionalName = t.name; break;
+                    case TokenType.ExitCommand: EatOneNewline(); break;
+                    case TokenType.BeginCommand:
+                        //Look in the command
+                        ITemplateElement templateElement = ParseCommand();
+                        EndBlockElement ce = templateElement as EndBlockElement;
+                        if (ce != null && ce.type == EndBlockType.If) { t.type = TokenType.End; EatOneNewline(); }
+                        if (templateElement as ElseElement != null)
+                        {
+                            elseCmd = templateElement as ElseElement;
+                        }
+                        else if (sb.Length > 0)
+                        {
+                            statements.Add(new TextElement(sb.ToString()));
+                            statements.Add(templateElement);
+                            sb.Length = 0;
+                        }
+                        break;
+                    default:
+                        if (currentchar == '\n' || currentchar == '\r')
+                        {
+                            sb.Append(GrabNewlines());
+                            if (sb.Length > 0)
+                                statements.Add(new TextElement(sb.ToString()));
+                            sb.Length = 0;
+                        }
+                        else
+                            sb.Append(currentchar);
+
+                        NextChar();
+                        break;
+                }
+
+            } while (!Eof && t.type != TokenType.End);
+
+            var ifCmd = new IfElement(conditionalName, statements, elseCmd);
+
+            return ifCmd;
         }
 
+        private ITemplateElement Else()
+        {
+            Token t;
+            StringBuilder sb = new StringBuilder();
+            List<ITemplateElement> statements = new List<ITemplateElement>();
+
+            do
+            {
+                t = GetToken();
+                switch (t.type)
+                {
+                    case TokenType.Word: throw new Exception("Unexpected word in else command!");
+                    case TokenType.ExitCommand: EatOneNewline(); break;
+                    case TokenType.BeginCommand:
+                        //Look in the command
+                        ITemplateElement templateElement = ParseCommand();
+                        EndBlockElement ce = templateElement as EndBlockElement;
+                        if (ce != null && ce.type == EndBlockType.If) { t.type = TokenType.End; EatOneNewline(); }
+
+                        if (sb.Length > 0)
+                        {
+                            statements.Add(new TextElement(sb.ToString()));
+                            statements.Add(templateElement);
+                            sb.Length = 0;
+                        }
+                        break;
+                    case TokenType.End: break;
+                    default:
+                        if (currentchar == '\n' || currentchar == '\r')
+                        {
+                            sb.Append(GrabNewlines());
+                            if (sb.Length > 0)
+                                statements.Add(new TextElement(sb.ToString()));
+                            sb.Length = 0;
+                        }
+                        else
+                            sb.Append(currentchar);
+
+                        NextChar();
+                        break;
+                }
+
+            } while (!Eof && t.type != TokenType.End);
+
+            var ifCmd = new ElseElement(statements);
+
+            return ifCmd;
+
+        }
         //This lets us keep track of the iterator variable which we will look for
         //in other methods so we can appropriately replace it with its value
         string forEachIterator = null;
         ITemplateElement ForEach()
         {
-            TokenInfo t;
+            Token t;
             string collectionName = null;
             bool foundIn = false;
             StringBuilder sb = new StringBuilder();
@@ -386,11 +486,11 @@ namespace Pixelbyte.CodeGen
         }
 
         string indent = string.Empty;
-        TokenInfo GetToken()
+        Token GetToken()
         {
             switch (currentchar)
             {
-                case '{': if (PeekChar == '{') { indent = indentation.LastValidIndentation; indentation.Reset(); NextChar(); NextChar(); commandLevel++; return new TokenInfo(TokenType.BeginCommand); } break;
+                case '{': if (PeekChar == '{') { indent = indentation.LastValidIndentation; indentation.Reset(); NextChar(); NextChar(); commandLevel++; return new Token(TokenType.BeginCommand); } break;
                     //case '{': if (PeekChar == '{') { NextChar(); NextChar(); commandLevel++; return new TokenInfo(TokenType.BeginCommand); } break;
             }
 
@@ -401,15 +501,15 @@ namespace Pixelbyte.CodeGen
 
                 switch (currentchar)
                 {
-                    case '(': return new TokenInfo(TokenType.ParenOpen);
-                    case ')': return new TokenInfo(TokenType.ParenClose);
-                    case '}': if (PeekChar == '}') { NextChar(); NextChar(); commandLevel--; return new TokenInfo(TokenType.ExitCommand); } break;
+                    case '(': return new Token(TokenType.ParenOpen);
+                    case ')': return new Token(TokenType.ParenClose);
+                    case '}': if (PeekChar == '}') { NextChar(); NextChar(); commandLevel--; return new Token(TokenType.ExitCommand); } break;
                 }
 
                 //Whitespace is not important in a command
                 EatWhitespace();
 
-                TokenInfo info = FunctionOrWord();
+                Token info = FunctionOrWord();
                 info.indentation = indent;
 
                 //Not a function, must be a word
@@ -420,6 +520,7 @@ namespace Pixelbyte.CodeGen
                         case "foreach": info.type = TokenType.ForEach; break;
                         case "end": info.type = TokenType.End; info.name = ParseWord(); break;
                         case "if": info.type = TokenType.If; break;
+                        case "else": info.type = TokenType.Else; break;
                         case "in": info.type = TokenType.In; break;
                         default: info.type = TokenType.Word; break;
                     }
@@ -429,7 +530,7 @@ namespace Pixelbyte.CodeGen
             else
                 indent = String.Empty;
 
-            return new TokenInfo(TokenType.None);
+            return new Token(TokenType.None);
         }
 
         void EatWhitespace() { while (!Eof && WHITESPACE.IndexOf(currentchar) > -1) NextChar(); }

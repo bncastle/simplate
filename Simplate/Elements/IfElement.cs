@@ -2,30 +2,54 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
 
 namespace Pixelbyte.CodeGen
 {
     //https://stackoverflow.com/questions/28827705/c-sharp-creating-an-expression-in-runtime-with-a-string
     class IfElement : ITemplateElement
     {
-        //string variableName;
+        string variableName;
+        List<ITemplateElement> ifDo;
+        ITemplateElement elseDo;
+
+        public IfElement(string variableName, List<ITemplateElement> ifDo, ITemplateElement elseDo)
+        {
+            this.variableName = variableName;
+            this.ifDo = ifDo;
+            this.elseDo = elseDo;
+        }
 
         public string GetOutput(Dictionary<string, object> parameters, Functors functors)
         {
-            //object data;
-            //if (!parameters.TryGetValue(variableName, out data))
-            //    throw new Exception("Unable to find: " + variableName + " in the parameters!");
+            object data;
+            if (!parameters.TryGetValue(variableName, out data))
+            {
+                //Currently, if the parameter does not exist, assume that means the if is FALSE
+                //throw new Exception("Unable to find: " + variableName + " in the parameters!");
+                data = null;
+            }
 
-            //Type type = typeof(bool);
-            //var p = Expression.Parameter(type, "Variable");
-            //var field = Expression.PropertyOrField(p, variableName);
-            //Expression.
-            //Expression.Condition
-            throw new NotImplementedException();
-            //Expression.Equal()
-            //Expression.Lambda()
-            //System.Linq.Expressions.LambdaExpression le = new System.Linq.Expressions.LambdaExpression(
+            if (IsTrue(data))
+            {
+                return ifDo.GetOutput(parameters, functors);
+            }
+            else
+            {
+                if (elseDo != null)
+                    return elseDo.GetOutput(parameters, functors);
+                else
+                    return string.Empty;
+            }
+        }
+
+        bool IsTrue(object data)
+        {
+            if (data == null) return false;
+            Type t = data.GetType();
+            if (t == typeof(string)) { return !string.IsNullOrEmpty(data.ToString()); }
+            else if (t.IsClass) return data != null;
+            else if(t == typeof(bool)) { return (bool)data; }
+            else return true;
         }
     }
 }

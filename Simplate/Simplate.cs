@@ -330,6 +330,7 @@ namespace Pixelbyte.CodeGen
                         if (templateElement as ElseElement != null)
                         {
                             elseCmd = templateElement as ElseElement;
+                            t.type = TokenType.End;
                         }
                         else if (sb.Length > 0)
                         {

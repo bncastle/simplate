@@ -49,23 +49,43 @@ public static class TestPropAccess
     //Let's try a comment here
     {{foreach item in testItems}}
     public const {{itemType}} {{ pascal({{item.name}}) }} = {{item.id}};
+    public const string {{ pascal({{item.name}}) }}_s = ""{{item.id}}"";
     {{Turkey()}}
     {{Turkey()}}
     {{end foreach}}
 }";
 
         public const string testEmptyEnd = @"
-Itsa me mario!
-";
+Itsa me mario!";
+        public const string testIf = @"
+//Hello there
+{{if diamond}}
+We have diamonds!
+Somewhere...
+{{else}}
+No Diamonds here..
+Too bad!
+{{end if}}
+ok that was fun";
+
+        public const string testIfElse = @"
+Hello there.
+{{if name}}
+    Ah your name is {{name}}
+{{else}}
+    No name then?
+{{end if}}
+Mergdorious!";
+
         static Functors functors;
         static Simplate constSimplate;
         static void Main()
         {
 
             var items = new string[] { "green", "blue", "red", "black", "elvis" };
-            
+
             constSimplate = Simplate.Compile(constTemplate);
-            
+
             //setup a global functors for all our tests
             functors = new Functors();
             functors.Add("camel", StringExtensions.ToCamelCase);
@@ -75,23 +95,31 @@ Itsa me mario!
             functors.Add("CarClass", new Func<string>(CarClass));
 
             //Test accessing properties/fields within foreach
-            //var nids = new Nid[] { new Nid("me", 1), new Nid("jamerson", 22), new Nid("testability", 147) };
-            //var par = new Dictionary<string, object>();
-            //par.Add("itemType", "int");
-            //par.Add("testItems", nids);
-            //Simplate fe = Simplate.Compile(testPropAccessTemplate);
-            //string feout = fe.GetOutput(par, functors);
-            //Console.WriteLine(feout);
+            var nids = new Nid[] { new Nid("me", 1), new Nid("jamerson", 22), new Nid("testability", 147) };
+            var par = new Dictionary<string, object>();
+            par.Add("itemType", "int");
+            par.Add("testItems", nids);
+            Simplate fe = Simplate.Compile(testPropAccessTemplate);
+            string feout = fe.GetOutput(par, functors);
+            Console.WriteLine(feout);
 
             //Test methods using Simplates
             var testMethods = Simplate.Compile(testMethodsUsingSimplates);
             var tm = Simplate.Compile(testEmptyEnd);
 
-            using (StreamWriter sw = new StreamWriter(@"E:\test.txt"))
-            {
-                sw.Write(testMethods.GetOutput(null, functors));
-            }
-            Console.WriteLine(testMethods.GetOutput(null, functors));
+            //var ifSimplate = Simplate.Compile(testIf);
+            //par.Add("diamond", false);
+            //Console.WriteLine(ifSimplate.GetOutput(par, functors));
+
+            par.Add("name", "turkey");
+            var ifElseSimplate = Simplate.Compile(testIfElse);
+            Console.WriteLine(ifElseSimplate.GetOutput(par, functors));
+
+            //using (StreamWriter sw = new StreamWriter(@"E:\test.txt"))
+            //{
+            //    sw.Write(testMethods.GetOutput(null, functors));
+            //}
+            //Console.WriteLine(testMethods.GetOutput(null, functors));
         }
 
         static string ColorClass()
